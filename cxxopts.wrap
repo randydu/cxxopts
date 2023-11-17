@@ -2,7 +2,7 @@
 
 directory = cxxopts
 url=https://github.com/randydu/cxxopts.git
-revision = latest
+revision = head
 clone-recursive = true
 
 [provide]
