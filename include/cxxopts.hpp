@@ -1645,6 +1645,13 @@ class OptionParser
   NameHashMap m_keys{};
 };
 
+namespace
+{
+constexpr std::size_t DEFAULT_MAX_WIDTH = 76;
+constexpr std::size_t OPTION_LONGEST    = 30;
+constexpr std::size_t OPTION_DESC_GAP   = 2;
+} // namespace
+
 class Options
 {
   public:
@@ -1652,8 +1659,10 @@ class Options
     : m_program(std::move(program_name)),
       m_help_string(toLocalString(std::move(help_string))),
       m_custom_help("[OPTION...]"), m_positional_help("positional parameters"),
-      m_show_positional(false), m_allow_unrecognised(false), m_width(76),
-      m_tab_expansion(false), m_options(std::make_shared<OptionMap>())
+      m_show_positional(false), m_allow_unrecognised(false),
+      m_width(DEFAULT_MAX_WIDTH), m_max_option_width(OPTION_LONGEST),
+      m_desc_gap(OPTION_DESC_GAP), m_tab_expansion(false),
+      m_options(std::make_shared<OptionMap>())
   {
   }
 
@@ -1684,6 +1693,18 @@ class Options
   Options& set_width(std::size_t width)
   {
     m_width = width;
+    return *this;
+  }
+
+  Options& set_option_width(std::size_t option_width)
+  {
+    m_max_option_width = option_width;
+    return *this;
+  }
+
+  Options& set_description_gap(std::size_t gap)
+  {
+    m_desc_gap = gap;
     return *this;
   }
 
@@ -1756,7 +1777,9 @@ class Options
   std::string m_positional_help{};
   bool m_show_positional;
   bool m_allow_unrecognised;
-  std::size_t m_width;
+  std::size_t m_width;            // maximum line width
+  std::size_t m_max_option_width; // maximum option width
+  std::size_t m_desc_gap;         // description gap
   bool m_tab_expansion;
 
   std::shared_ptr<OptionMap> m_options;
@@ -1787,8 +1810,6 @@ class OptionAdder
 
 namespace
 {
-constexpr std::size_t OPTION_LONGEST  = 30;
-constexpr std::size_t OPTION_DESC_GAP = 2;
 
 String
 format_option(const HelpOptionDetails& o)
@@ -2409,13 +2430,13 @@ Options::help_one_group(const std::string& g) const
     longest = (std::max)(longest, stringLength(s));
     format.push_back(std::make_pair(s, String()));
   }
-  longest = (std::min)(longest, OPTION_LONGEST);
+  longest = (std::min)(longest, m_max_option_width);
 
   // widest allowed description -- min 10 chars for helptext/line
   std::size_t allowed = 10;
-  if (m_width > allowed + longest + OPTION_DESC_GAP)
+  if (m_width > allowed + longest + m_desc_gap)
   {
-    allowed = m_width - longest - OPTION_DESC_GAP;
+    allowed = m_width - longest - m_desc_gap;
   }
 
   auto fiter = format.begin();
@@ -2428,19 +2449,19 @@ Options::help_one_group(const std::string& g) const
       continue;
     }
 
-    auto d = format_description(o, longest + OPTION_DESC_GAP, allowed,
+    auto d = format_description(o, longest + m_desc_gap, allowed,
                                 m_tab_expansion);
 
     result += fiter->first;
     if (stringLength(fiter->first) > longest)
     {
       result += '\n';
-      result += toLocalString(std::string(longest + OPTION_DESC_GAP, ' '));
+      result += toLocalString(std::string(longest + m_desc_gap, ' '));
     }
     else
     {
       result += toLocalString(std::string(
-        longest + OPTION_DESC_GAP - stringLength(fiter->first), ' '));
+        longest + m_desc_gap - stringLength(fiter->first), ' '));
     }
     result += d;
     result += '\n';

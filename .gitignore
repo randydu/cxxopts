@@ -75,3 +75,9 @@ docs/
 *.tar
 *.xz
 
+# CMake files (in source build)
+*.cmake
+cxxopts.pc
+test/add-subdirectory-test
+test/find-package-test
+test/link_test
