@@ -1,0 +1,9 @@
+[wrap-git]
+
+directory = cxxopts
+url=https://github.com/randydu/cxxopts.git
+revision = latest
+clone-recursive = true
+
+[provide]
+cxxopts = cxxopts_dep
