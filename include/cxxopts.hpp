@@ -1661,7 +1661,7 @@ class Options
       m_custom_help("[OPTION...]"), m_positional_help("positional parameters"),
       m_show_positional(false), m_allow_unrecognised(false),
       m_width(DEFAULT_MAX_WIDTH), m_max_option_width(OPTION_LONGEST),
-      m_desc_gap(OPTION_DESC_GAP), m_tab_expansion(false),
+      m_fixed_width(false), m_desc_gap(OPTION_DESC_GAP), m_tab_expansion(false),
       m_options(std::make_shared<OptionMap>())
   {
   }
@@ -1696,9 +1696,20 @@ class Options
     return *this;
   }
 
-  Options& set_option_width(std::size_t option_width)
+  /**
+   * Set the maximum width of the option help string.
+   * @param option_width the maximum width of the option help string.
+   * @param fixed_width Wether the <option_width> value applys to all groups as
+   * fixed width. If true, all groups will share the same option width so that
+   * the descriptions of all groups will be left aligned, otherwise the option
+   * width of each group will be determined by the longest option width in its
+   * own group, as a result the descriptions will be left aligned locally.
+   * (Default behavior)
+   */
+  Options& set_option_width(std::size_t option_width, bool fixed_width)
   {
     m_max_option_width = option_width;
+    m_fixed_width      = fixed_width;
     return *this;
   }
 
@@ -1779,6 +1790,7 @@ class Options
   bool m_allow_unrecognised;
   std::size_t m_width;            // maximum line width
   std::size_t m_max_option_width; // maximum option width
+  bool m_fixed_width;             // all options share the same width.
   std::size_t m_desc_gap;         // description gap
   bool m_tab_expansion;
 
@@ -2426,11 +2438,15 @@ Options::help_one_group(const std::string& g) const
       continue;
     }
 
-    auto s  = format_option(o);
-    longest = (std::max)(longest, stringLength(s));
+    auto s = format_option(o);
+    if (!m_fixed_width)
+    {
+      longest = (std::max)(longest, stringLength(s));
+    }
     format.push_back(std::make_pair(s, String()));
   }
-  longest = (std::min)(longest, m_max_option_width);
+  longest = m_fixed_width ? m_max_option_width
+                          : (std::min)(longest, m_max_option_width);
 
   // widest allowed description -- min 10 chars for helptext/line
   std::size_t allowed = 10;
@@ -2449,8 +2465,8 @@ Options::help_one_group(const std::string& g) const
       continue;
     }
 
-    auto d = format_description(o, longest + m_desc_gap, allowed,
-                                m_tab_expansion);
+    auto d =
+      format_description(o, longest + m_desc_gap, allowed, m_tab_expansion);
 
     result += fiter->first;
     if (stringLength(fiter->first) > longest)
@@ -2460,8 +2476,8 @@ Options::help_one_group(const std::string& g) const
     }
     else
     {
-      result += toLocalString(std::string(
-        longest + m_desc_gap - stringLength(fiter->first), ' '));
+      result += toLocalString(
+        std::string(longest + m_desc_gap - stringLength(fiter->first), ' '));
     }
     result += d;
     result += '\n';
